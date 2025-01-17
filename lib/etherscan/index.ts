@@ -2,7 +2,7 @@
 import { Address } from "viem";
 import { EtherscanTxItem } from "./types";
 
-const API_KEY = process.env.BASESCAN_API_KEY;
+const API_KEYS = [process.env.BASESCAN_API_KEY, process.env.BASESCAN_API_KEY2, process.env.BASESCAN_API_KEY3];
 const BASE_URL = "https://api.basescan.org/api";
 const RATE_LIMIT_DELAY = 200;
 const PAGE_SIZE = 10000;
@@ -14,7 +14,8 @@ export async function getTransactions(address: Address) {
   let hasMore = true;
 
   const fetchTransactions = async (page: number, retries = 0) => {
-    const url = `${BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=${page}&offset=${PAGE_SIZE}&sort=desc&apikey=${API_KEY}`;
+    const apiKey = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
+    const url = `${BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=${page}&offset=${PAGE_SIZE}&sort=desc&apikey=${apiKey}`;
     try {
       const res = await fetch(url);
       if (!res.ok) {
