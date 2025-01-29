@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { Address, isAddress } from "viem";
 import { createSignature } from "@/lib/signature";
 import { getTransactions } from "@/lib/etherscan";
+import { getJiffyscanTransactions } from "@/lib/jiffyscan";
+import { isContractAddress } from "@/lib/jiffyscan/utils";
 
 export async function GET(req: NextRequest, { params: { contract } }: { params: { contract: Address } }) {
   try {
@@ -12,7 +14,7 @@ export async function GET(req: NextRequest, { params: { contract } }: { params: 
     const methodIds = req.nextUrl.searchParams.getAll("methodId");
     console.log({ address, contract, methodIds });
 
-    const txs = await getTransactions(address);
+    const txs = await isContractAddress(address) ? await getJiffyscanTransactions(address) : await getTransactions(address);
     const verifiedTxs = txs.filter((tx) => {
       if (tx.to.toLowerCase() !== contract.toLowerCase()) {
         return false;
@@ -20,7 +22,7 @@ export async function GET(req: NextRequest, { params: { contract } }: { params: 
       if (methodIds.length === 0) {
         return true;
       }
-      return methodIds.some((id) => tx.methodId.toLowerCase() === id.toLowerCase())
+      return methodIds.some((id) => tx.methodId?.toLowerCase() === id.toLowerCase())
     });
 
     const mint_eligibility = verifiedTxs.length > 0;
