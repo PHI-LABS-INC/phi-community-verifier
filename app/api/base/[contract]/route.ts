@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params: { contract } }: { params: 
     const methodIds = req.nextUrl.searchParams.getAll("methodId");
     console.log({ address, contract, methodIds });
 
-    const txs = await isContractAddress(address) ? await getJiffyscanTransactions(address, 8453) : await getTransactions(address);
+    const txs = await isContractAddress(address) ? await getJiffyscanTransactions(address) : await getTransactions(address);
     const verifiedTxs = txs.filter((tx) => {
       if (tx.to.toLowerCase() !== contract.toLowerCase()) {
         return false;
