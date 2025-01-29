@@ -1,14 +1,3 @@
-import { Address } from "viem";
-
-export type UserOp = {
-  preDecodedCallData: string;
-  userOpHash: string;
-  sender: Address;
-  blockNumber: string;
-  success: "0" | "1";
-  input: string;
-};
-
 export type JiffyscanTxItem = {
   hash: string;
   from: string;

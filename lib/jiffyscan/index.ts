@@ -1,71 +1,38 @@
 import { Address } from "viem";
-import { JiffyscanTxItem, UserOp } from "./types";
-import { extractMethodIdAndContractAddress } from "./utils";
+import { JiffyscanTxItem } from "./types";
+import { ADDRESS_ACTIVITY_QUERY, extractMethodIdAndContractAddress, getDataFromGraph, retryOperation } from "./utils";
 
-const API_KEYS = [process.env.JIFFYSCAN_API_KEY, process.env.JIFFYSCAN_API_KEY2, process.env.JIFFYSCAN_API_KEY3];
-const BASE_URL = "https://api.jiffyscan.xyz/v0/getAddressActivity";
-const PAGE_SIZE = 10000;
-const RATE_LIMIT_DELAY = 200;
-const MAX_RETRIES = 5;
-
-// https://jiffyscan.mintlify.app/api-reference/data-api-endpoint/account/get-getaddressactivity
 export async function getJiffyscanTransactions(address: Address): Promise<JiffyscanTxItem[]> {
-  let allTxs: JiffyscanTxItem[] = [];
-  let hasMore = true;
-  let skip = 0;
-
-  const fetchTransactions = async (skip: number, retries = 0): Promise<UserOp[]> => {
-    const apiKey = API_KEYS[Math.floor(Math.random() * API_KEYS.length)]!;
-    const url = `${BASE_URL}?address=${address}&network=base&first=${PAGE_SIZE}&skip=${skip}`;
-    try {
-      const res = await fetch(url, { headers: { "x-api-key": apiKey } });
-      if (!res.ok) {
-        throw new Error(`Failed to fetch transactions: ${res.statusText}`);
-      }
-      const data = (await res.json()) as { accountDetail: { userOps: UserOp[] } };
-      if (!data?.accountDetail?.userOps) {
-        return [];
-      }
-      return data.accountDetail.userOps;
-    } catch (error) {
-      if (retries < MAX_RETRIES) {
-        console.warn(`Retrying fetch for skip=${skip} (attempt ${retries + 1}/${MAX_RETRIES})...`);
-        await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
-        return fetchTransactions(skip, retries + 1);
-      } else {
-        console.error(`Max retries reached for skip=${skip}. Error:`, error);
-        throw error;
-      }
-    }
-  };
-
-  while (hasMore) {
-    try {
-      const userOps = await fetchTransactions(skip);
-      const mappedTxs = userOps.map((op) => {
-        const { methodId, contractAddress } = extractMethodIdAndContractAddress(op.preDecodedCallData);
-        return {
-          hash: op.userOpHash,
-          from: op.sender,
-          to: contractAddress || "",
-          blockNumber: op.blockNumber,
-          methodId: methodId,
-          isError: op.success ? "0" : "1",
-        };
-      });
-
-      allTxs = allTxs.concat(mappedTxs);
-      if (userOps.length < PAGE_SIZE) {
-        hasMore = false;
-      } else {
-        skip += PAGE_SIZE;
-        await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_DELAY));
-      }
-    } catch (error) {
-      console.error("Error during transaction fetch loop:", error);
-      break;
-    }
+  const graphApiKey = process.env.GRAPH_API_KEY;
+  if (!graphApiKey) {
+    throw new Error("Graph API key not found");
   }
-
-  return allTxs;
+  try {
+    const allUserOps: JiffyscanTxItem[] = [];
+    let skip = 0;
+    while (true) {
+      const response = await retryOperation(() => getDataFromGraph(ADDRESS_ACTIVITY_QUERY, { address, first: 1000, skip }, graphApiKey));
+      if (!response?.userOps?.length) break;
+      allUserOps.push(
+        ...response.userOps.map((op) => {
+          const { methodId, contractAddress } = extractMethodIdAndContractAddress(op.callData);
+          return {
+            hash: op.userOpHash,
+            from: op.sender,
+            to: contractAddress || "",
+            blockNumber: op.blockNumber,
+            methodId: methodId,
+            isError: op.success ? "0" : "1",
+            input: op.input,
+          };
+        }),
+      );
+      if (response.userOps.length < 1000) break;
+      skip += 1000;
+    }
+    return allUserOps;
+  } catch (error) {
+    console.error("Failed to fetch transactions:", error);
+    return [];
+  }
 }
