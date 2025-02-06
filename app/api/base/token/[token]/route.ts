@@ -5,7 +5,7 @@ import { createSignature } from "@/lib/signature";
 
 const client = createPublicClient({
     chain: base,
-    transport: http()
+    transport: http(process.env.RPC_BASE)
 });
 
 // Contract ABIs
