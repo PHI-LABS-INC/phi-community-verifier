@@ -2,8 +2,8 @@
 import { Address } from "viem";
 import { EtherscanTxItem } from "./types";
 
-const API_KEYS = [process.env.BASESCAN_API_KEY, process.env.BASESCAN_API_KEY2, process.env.BASESCAN_API_KEY3];
-const BASE_URL = "https://api.basescan.org/api";
+const API_KEYS = [process.env.ETHERSCAN_API_KEY, process.env.ETHERSCAN_API_KEY2, process.env.ETHERSCAN_API_KEY3];
+const BASE_URL = "https://api.etherscan.io/v2/api?chainid=8453";
 const RATE_LIMIT_DELAY = 200;
 const PAGE_SIZE = 10000;
 const MAX_RETRIES = 5;
@@ -15,7 +15,9 @@ export async function getTransactions(address: Address) {
 
   const fetchTransactions = async (page: number, retries = 0) => {
     const apiKey = API_KEYS[Math.floor(Math.random() * API_KEYS.length)];
-    const url = `${BASE_URL}?module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=${page}&offset=${PAGE_SIZE}&sort=desc&apikey=${apiKey}`;
+    const url = `${BASE_URL}&module=account&action=txlist&address=${address}&startblock=0&endblock=latest&page=${page}&offset=${PAGE_SIZE}&sort=desc&apikey=${apiKey}`;
+
+    console.log(`[etherscan] Fetching page ${page}...`);
     try {
       const res = await fetch(url);
       if (!res.ok) {
@@ -31,7 +33,7 @@ export async function getTransactions(address: Address) {
           throw new Error("Max retry attempts reached due to rate limit.");
         }
       }
-      if (data.status !== "1" && data.result.length === 0) {
+      if (data.status !== "1" && (!data.result || data.result.length === 0)) {
         return [];
       }
       return data.result;
@@ -44,6 +46,7 @@ export async function getTransactions(address: Address) {
   while (hasMore) {
     try {
       const txs = await fetchTransactions(page);
+      console.log(`Fetched ${txs.length} transactions from page ${page}`);
       allTxs = allTxs.concat(txs);
       if (txs.length < PAGE_SIZE) {
         hasMore = false;
