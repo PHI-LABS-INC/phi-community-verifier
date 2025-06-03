@@ -27,10 +27,10 @@ export async function GET(req: NextRequest, { params: { token } }: { params: { t
     url.searchParams.set("apikey", apiKey!);
     const response = await fetch(url.toString());
     const data = await response.json();
-    if (data.status !== "1") {
-      console.error("Etherscan API error:", data.message);
-      return new Response("Failed to fetch transactions", { status: 500 });
-    }
+    // if (data.status !== "1") {
+    //   console.error("Etherscan API error:", data.message);
+    //   return new Response("Failed to fetch transactions", { status: 500 });
+    // }
 
     const mint_eligibility = data.result.some((tx: any) => tx.from.toLowerCase() === address.toLowerCase())
     const signature = await createSignature({ address, mint_eligibility });
