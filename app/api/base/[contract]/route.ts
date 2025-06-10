@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params: { contract } }: { params: 
       return new Response("Invalid address", { status: 400 });
     }
     const methodIds = req.nextUrl.searchParams.getAll("methodId");
-    const threshold = parseInt(req.nextUrl.searchParams.get("threshold") || "0");
+    const threshold = parseInt(req.nextUrl.searchParams.get("threshold") || "1");
     console.log({ address, contract, methodIds, threshold });
 
     const txs = await isContractAddress(address) ? await getJiffyscanTransactions(address) : await getTransactions(address);
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params: { contract } }: { params: 
       return methodIds.some((id) => tx.methodId?.toLowerCase() === id.toLowerCase())
     });
 
-    const mint_eligibility = verifiedTxs.length > threshold;
+    const mint_eligibility = verifiedTxs.length >= threshold;
     const signature = await createSignature({ address, mint_eligibility });
 
     return Response.json({ signature, mint_eligibility }, { status: 200 });
