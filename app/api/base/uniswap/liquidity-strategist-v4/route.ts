@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     if (!address || !isAddress(address)) {
       return new Response("Invalid address",{ status: 400 });
     }
+    const threshold = req.nextUrl.searchParams.get("threshold") || "1";
 
     const balance = await client.readContract({
       address: PositionManager,
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
       functionName: "balanceOf",
       args: [address],
     });
-    const mint_eligibility = balance >= BigInt(5);
+    const mint_eligibility = balance >= BigInt(threshold);
     const data = balance.toString();
     const signature = await createSignature({ address, mint_eligibility, data });
 
