@@ -38,9 +38,10 @@ export async function GET(req: NextRequest) {
       args: [address],
     });
     const mint_eligibility = balance >= BigInt(5);
-    const signature = await createSignature({ address, mint_eligibility, data: balance.toString() });
+    const data = balance.toString();
+    const signature = await createSignature({ address, mint_eligibility, data });
 
-    return Response.json({ signature, mint_eligibility }, { status: 200 });
+    return Response.json({ signature, mint_eligibility, data }, { status: 200 });
   } catch (err) {
     console.error(err);
     return new Response("Internal server error", { status: 500 });
